@@ -6,7 +6,6 @@ on:
 
 jobs:
   build:
-  # 使用 Ubuntu 云端环境
     runs-on: ubuntu-latest
 
     steps:
@@ -26,8 +25,15 @@ jobs:
         run: |
           npx aiot build --enable-custom-component
 
+      - name: Check Build Files
+        run: |
+          ls -R
+
       - name: Upload RPK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: mi-shelter-rpk
-          path: dist/*.rpk
+          path: |
+            dist/
+            build/
+            *.rpk
