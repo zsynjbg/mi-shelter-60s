@@ -25,15 +25,16 @@ jobs:
         run: |
           npx aiot build --enable-custom-component
 
-      - name: Check Build Files
+      - name: Show All Generated Files
         run: |
-          ls -R
+          find . -maxdepth 4 -not -path '*/.*' -not -path './node_modules*'
 
       - name: Upload RPK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: mi-shelter-rpk
           path: |
-            dist/
-            build/
-            *.rpk
+            dist/**/*
+            build/**/*
+            **/*.rpk
+          if-no-files-found: ignore
