@@ -1,0 +1,23 @@
+{
+  "package": "com.survive.sixtyseconds",
+  "name": "60s避难所",
+  "versionName": "1.0.0",
+  "versionCode": 1,
+  "minAPILevel": 4,
+  "deviceTypeList": ["watch", "band"],
+  "config": {
+    "designWidth": 336
+  },
+  "features": [
+    { "name": "system.storage" },
+    { "name": "system.prompt" }
+  ],
+  "router": {
+    "entry": "pages/Index",
+    "pages": {
+      "pages/Index": {
+        "component": "index"
+      }
+    }
+  }
+}
