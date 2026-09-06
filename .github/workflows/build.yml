@@ -17,24 +17,26 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Dependencies
+      - name: Install Toolkit Globally and Locally
         run: |
+          npm install -g @xiaomi/aiot-toolkit || npm install -g aiot-toolkit
           npm install
 
-      - name: Build QuickApp RPK
+      - name: Run Build Command
         run: |
-          npx aiot build --enable-custom-component
+          npx aiot-toolkit build || npx aiot build || npm run build
 
-      - name: Show All Generated Files
+      - name: Show All Files After Build
         run: |
           find . -maxdepth 4 -not -path '*/.*' -not -path './node_modules*'
 
-      - name: Upload RPK Artifact
+      - name: Upload Everything
         uses: actions/upload-artifact@v4
         with:
-          name: mi-shelter-rpk
+          name: mi-shelter-rpk-package
           path: |
-            dist/**/*
-            build/**/*
-            **/*.rpk
-          if-no-files-found: ignore
+            .
+            !node_information/
+            !.git/
+            !node_modules/
+          if-no-files-found: error
