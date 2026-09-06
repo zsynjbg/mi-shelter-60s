@@ -1,0 +1,9 @@
+{
+  "name": "mi-shelter-60s",
+  "version": "1.0.0",
+  "description": "60s Shelter QuickApp for Mi Band 9 Pro",
+  "private": true,
+  "devDependencies": {
+    "aiot-toolkit": "^2.0.0"
+  }
+}
