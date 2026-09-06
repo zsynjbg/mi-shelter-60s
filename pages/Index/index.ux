@@ -1,0 +1,132 @@
+<template>
+  <div class="container">
+    <image class="bg-image" src="/common/78962.png"></image>
+    <div class="ui-layer">
+      <div class="header">
+        <text class="day-text">第 {{day}} 天</text>
+        <text class="hp-text" style="color: {{hp > 30 ? '#4CAF50' : '#FF5252'}};">健康: {{hp}}%</text>
+      </div>
+      <div class="event-box">
+        <text class="event-title">=== 避难所日志 ===</text>
+        <text class="event-desc">{{eventText}}</text>
+      </div>
+      <text class="section-title">我的物资 (点击使用):</text>
+      <list class="inventory-list" scroll-x="true">
+        <list-item class="item-card" type="item" for="{{item in items}}" onclick="useItem($item)">
+          <div class="item-img-box">
+            <image class="item-img" src="{{item.src}}"></image>
+          </div>
+          <text class="item-name">{{item.name}}</text>
+        </list-item>
+      </list>
+      <div class="actions">
+        <div class="btn btn-primary" onclick="nextDay">
+          <text class="btn-text">下一天</text>
+        </div>
+        <div class="action-row">
+          <div class="btn btn-save" onclick="saveGame">
+            <text class="btn-text-small">💾 存档</text>
+          </div>
+          <div class="btn btn-danger" onclick="resetGame">
+            <text class="btn-text-small">🔄 重置</text>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  import storage from '@system.storage';
+  import prompt from '@system.prompt';
+
+  const ALL_ITEMS = [
+    { id: 'suitcase', name: '神秘提箱', src: '/common/78961.png', effect: '提供随机补给' },
+    { id: 'board', name: '跳棋棋盘', src: '/common/78960.png', effect: '缓解精神压力' },
+    { id: 'cards', name: '旧扑克牌', src: '/common/78959.png', effect: '缓解精神压力' },
+    { id: 'flashlight', name: '手电筒', src: '/common/78958.png', effect: '探索黑暗区域' },
+    { id: 'handbook', name: '童子军手册', src: '/common/78957.png', effect: '解决技术故障' },
+    { id: 'radio', name: '旧收音机', src: '/common/78956.png', effect: '获取外界情报' },
+    { id: 'axe', name: '消防斧', src: '/common/78954.png', effect: '抵御外敌入侵' }
+  ];
+
+  const EVENTS = [
+    { id: 1, text: '避难所突然停电了，四周伸手不见五指，可能有变异生物潜入。', need: 'flashlight', success: '你用手电筒照亮了四周，赶走了一只变异蜘蛛。', fail: '你在黑暗中摔了一跤，受了伤。' },
+    { id: 2, text: '通风管道发出了刺耳的警报声，空气过滤器似乎卡住了。', need: 'handbook', success: '你翻阅童子军手册，成功修好了过滤器，呼吸顺畅了。', fail: '缺氧让你感到头晕目眩，健康下降。' },
+    { id: 3, text: '外面传来了剧烈的砸门声，似乎有掠夺者试图破门而入！', need: 'axe', success: '你拿着消防斧守在门后，掠夺者知难而退。', fail: '大门被破坏了一部分，你在抵抗中受了伤。' },
+    { id: 4, text: '漫长的地下生活让人感到极度压抑，你需要找点乐子。', need: ['cards', 'board'], success: '你玩了一会儿游戏，精神状态好多了。', fail: '无聊和恐惧侵蚀着你的理智，健康受损。' },
+    { id: 5, text: '外界隐约传来微弱的电波干扰声，是否有军队在广播？', need: 'radio', success: '你调准频道，听到了空投物资的位置！', fail: '由于没有设备，你错过了外界的消息。' },
+    { id: 6, text: '平静的一天。除了肚子咕咕叫，什么也没发生。', need: 'none', success: '', fail: '消耗了基础的体力。' }
+  ];
+
+  export default {
+    private: {
+      day: 1,
+      hp: 100,
+      eventText: '核爆警报解除！你成功躲进了避难所。快速清点一下你的初始物资吧！',
+      items: [],
+      currentEvent: null,
+      isResolved: true
+    },
+    onInit() {
+      this.loadGame();
+    },
+    nextDay() {
+      if (this.hp <= 0) {
+        prompt.showToast({ message: '你已在废土中倒下，请重置游戏。' });
+        return;
+      }
+      if (!this.isResolved && this.currentEvent && this.currentEvent.need !== 'none') {
+        this.hp -= 15;
+        prompt.showToast({ message: '由于未解决危机，你受到了伤害！' });
+      }
+      this.day++;
+      this.hp -= 5; 
+      if (this.hp <= 0) {
+        this.hp = 0;
+        this.eventText = '【游戏结束】你的健康值降至0，避难所成为了你的坟墓...';
+        return;
+      }
+      this.isResolved = false;
+      const randIndex = Math.floor(Math.random() * EVENTS.length);
+      this.currentEvent = EVENTS[randIndex];
+      this.eventText = this.currentEvent.text;
+      if (Math.random() > 0.6 && this.items.length < ALL_ITEMS.length) {
+        this.findRandomItem();
+      }
+    },
+    useItem(item) {
+      if (this.hp <= 0) return;
+      if (this.isResolved) {
+        prompt.showToast({ message: '目前不需要使用道具。' });
+        return;
+      }
+      if (this.currentEvent) {
+        let isMatch = false;
+        if (Array.isArray(this.currentEvent.need)) {
+          isMatch = this.currentEvent.need.includes(item.id);
+        } else {
+          isMatch = (this.currentEvent.need === item.id);
+        }
+        if (isMatch) {
+          this.eventText = '【危机解除】' + this.currentEvent.success;
+          this.isResolved = true;
+          this.hp = Math.min(100, this.hp + 5);
+          prompt.showToast({ message: `成功使用了 ${item.name}` });
+        } else {
+          prompt.showToast({ message: `${item.name} 在这种情况下派不上用场。` });
+        }
+      }
+    },
+    findRandomItem() {
+      const unowned = ALL_ITEMS.filter(i => !this.items.some(owned => owned.id === i.id));
+      if (unowned.length > 0) {
+        const newItem = unowned[Math.floor(Math.random() * unowned.length)];
+        this.items.push(newItem);
+        prompt.showToast({ message: `探索发现新物资：${newItem.name}！` });
+      }
+    },
+    saveGame() {
+      try {
+        const saveData = {
+          day: this.day
